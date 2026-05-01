@@ -7,10 +7,25 @@ use App\Models\Cheater;
 
 class CheaterController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $cheaters = Cheater::all();
-        return view('cheaters.index', compact('cheaters'));
+        $search = trim($request->input('search', ''));
+        $cheaters = Cheater::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $digits = preg_replace('/[^0-9]/', '', $search);
+
+                $query->where('name', 'like', "%{$search}%");
+
+                if ($digits !== '') {
+                    $query->orWhere('cpf', 'like', "%{$digits}%")
+                          ->orWhere('zipcode', 'like', "%{$digits}%");
+                }
+            })
+            ->orderBy('id', 'desc')
+            ->paginate(5)
+            ->withQueryString();
+
+        return view('cheaters.index', compact('cheaters', 'search'));
     }
 
     public function create()
